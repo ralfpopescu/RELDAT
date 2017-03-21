@@ -32,9 +32,15 @@ def checksum():
 def main(argv):
 
     numArgs = len(argv)
-    port = -1
+    port = int(argv[1])
+    window = argv[2]
     #host = socket.gethostbyname(socket.gethostname())
     host = "127.0.0.1"
+    send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rec_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    print host
+    print port
 
     if numArgs == 1:
         return "port number and spam words file required"
@@ -46,9 +52,6 @@ def main(argv):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((host, port))
-
-    print host
-    print port
 
     waitforconnection(sock)
 
@@ -62,12 +65,9 @@ def main(argv):
             sock.sendto("BUSY", addr)
 
         # time.sleep(10)
-        mes = mes[:-1]
-        mes = mes.lower()
+        mes = mes.split('_')
+        send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
 
-
-        #reply to client
-        sock.sendto("reply", addr)
 
 
 
