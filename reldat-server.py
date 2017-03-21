@@ -1,6 +1,7 @@
 import sys
 import socket
 import time
+from struct import *
 
 connection = [0, 0, "", 0] #{client packet num, server packet num, client IP address, connected}
 
@@ -55,22 +56,27 @@ def main(argv):
 
     waitforconnection(sock)
 
-    out_file = open("out-file.pdf", "wb")
+    out_file = open("out-file.txt", "wb")
+
+    counter = 0
 
     print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     while True:
 
+        print counter
+        counter += 1
         #recieve message and address from client
         mes, addr = sock.recvfrom(1024)
 
-        if connection[3] and addr is not connection[2]: #maintain connection with only one address
-            sock.sendto("BUSY", addr)
+        # if connection[3] and addr is not connection[2]: #maintain connection with only one address
+        #     sock.sendto("BUSY", addr)
 
         # time.sleep(10)
-        # mes = mes.split('_')
-        # send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
+        mes = mes.split('_')
+        send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
 
-        out_file.write(mes)
+
+        out_file.write(mes[1])
 
 
 

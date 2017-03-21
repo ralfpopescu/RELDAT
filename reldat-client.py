@@ -1,6 +1,7 @@
 import socket
 import sys
 import os
+import struct
 
 
 connection = [0, 0, "", 0] #{client packet num, server packet num, server IP address, connected}
@@ -50,7 +51,7 @@ def main(argv):
     window = int(argv[2])
     server = host_port[0]
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    packets = "Hello my name is joe and i live in a button factory i have a mom house and a family".split(' ')
+    packets = []
     print "Connecting to "+str(host)+":"+str(port)
     sock.bind((socket.gethostbyname(socket.gethostname()), port))
 
@@ -82,8 +83,8 @@ def main(argv):
     lastSent = 0;
     lastRec = 0
 
-    packets = []
     l = f.read(packetsize)
+
     while (l):
         packets.append(l)
         l = f.read(packetsize)
@@ -95,7 +96,8 @@ def main(argv):
             sock.settimeout(2)
             print lastSent - lastRec
             while lastSent < len(packets) and lastSent - lastRec < window:
-                sock.sendto(packets[lastSent], (host, port))
+                print packets[lastSent]
+                sock.sendto(str(lastSent)+"_"+packets[lastSent], (host, port))
                 lastSent+=1
             print "WAITING"
             mes = sock.recv(4096).split('_')
