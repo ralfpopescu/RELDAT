@@ -55,7 +55,9 @@ def main(argv):
 
     waitforconnection(sock)
 
-    print "Server started listening at %s port %d" % (host,port)
+    out_file = open("out-file.pdf", "wb")
+
+    print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     while True:
 
         #recieve message and address from client
@@ -65,8 +67,12 @@ def main(argv):
             sock.sendto("BUSY", addr)
 
         # time.sleep(10)
-        mes = mes.split('_')
-        send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
+        # mes = mes.split('_')
+        # send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
+
+        out_file.write(mes)
+
+
 
 
 
