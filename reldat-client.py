@@ -37,8 +37,9 @@ def packetize(array, packetsize):
     return packets
 
 
-def initfiletransfer():
+def initfiletransfer(sock, numofpackets, filename, host, port):
     print "initializing file transfer"
+    sock.sendto("INIT_FILETRANSFER_" + filename + "_" + str(numofpackets), (host, port))
 
 def main(argv):
 
@@ -56,6 +57,7 @@ def main(argv):
     sock.bind((socket.gethostbyname(socket.gethostname()), port))
 
     packetsize = 1000
+    filename = sys.argv[3]
     f = open(argv[3], "rb")
     f.seek(0,2)
     filesize = f.tell()
@@ -89,6 +91,10 @@ def main(argv):
         packets.append(l)
         l = f.read(packetsize)
 
+    acked = []
+    inAir = []
+
+    initfiletransfer(sock, numofpackets, filename, host, port)
 
     while lastRec < numofpackets: #we need to detect duplicate and lost packets
         try:
@@ -96,13 +102,13 @@ def main(argv):
             sock.settimeout(2)
             print lastSent - lastRec
             while lastSent < len(packets) and lastSent - lastRec < window:
-                print packets[lastSent]
                 sock.sendto(str(lastSent)+"_"+packets[lastSent], (host, port))
+                inAir.append((lastSent, packets[lastSent]))
                 lastSent+=1
             print "WAITING"
             mes = sock.recv(4096).split('_')
             print mes
-            lastRec = int(mes[0])
+            lastRec = int(mes[1])
         except socket.timeout:
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:

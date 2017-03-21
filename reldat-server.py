@@ -30,6 +30,7 @@ def checksum():
     print "ay"
 
 
+
 def main(argv):
 
     numArgs = len(argv)
@@ -56,9 +57,12 @@ def main(argv):
 
     waitforconnection(sock)
 
-    out_file = open("out-file.txt", "wb")
-
     counter = 0
+
+    filereceiving = []
+
+    filename = "none" #declare outside of scope
+    filesize = 0
 
     print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     while True:
@@ -71,12 +75,26 @@ def main(argv):
         # if connection[3] and addr is not connection[2]: #maintain connection with only one address
         #     sock.sendto("BUSY", addr)
 
-        # time.sleep(10)
         mes = mes.split('_')
-        send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
+
+        if(mes[0] == "INIT_FILETRANSFER"):
+            print "initializing file transfer of" + mes[1]
+            filename = mes[1].split(".") #takes off txt
+            filesize = mes[2]
+            out_file = open(filename[0] + "-received.txt", "wb")
+            filereceiving = [0] * mes[2] # we initialize an array of zeroes indexed by sequence number
+
+        if(mes[0] == "FIN_TRANSFER"):
+            for piece in filereceiving:
+                out_file.write(mes[1])
 
 
-        out_file.write(mes[1])
+        else:
+            send_sock.sendto("ACK_"+mes[0]+"_Got "+mes[1],addr)
+            filereceiving[mes[0]] = mes[1]
+
+
+
 
 
 
