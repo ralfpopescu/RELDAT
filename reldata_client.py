@@ -1,6 +1,8 @@
 import socket
 import sys
 import time
+import Queue as queue
+
 
 def main(argv):
     args = len(argv)
@@ -10,12 +12,19 @@ def main(argv):
     host = host_port[0]
     port = int(host_port[1])
     window = int(argv[2])
-    message = "hello"
+    sentQueue = queue.Queue(maxsize = window)
+    connectionEstablish = ['0_1_0_', '1_0_1_',]
+    count = 2
+    messageQueue = queue.Queue()
     host = socket.gethostbyname(socket.gethostname())
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     packets = "Hello my name is joe and i live in a button factory i have a mom house and a family".split(' ')
     print "Connecting to "+str(host)+":"+str(port)
-    # while True:
+    for pack in packets:
+        messageQueue.put(str(count%window)+"_0_0_"+pack)
+        count += 1
+    while not messageQueue.empty():
+        print messageQueue.get()
     lastSent = 0;
     lastRec = 0
     while lastRec < len(packets):
