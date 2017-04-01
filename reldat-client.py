@@ -39,7 +39,16 @@ def packetize(array, packetsize):
 
 def initfiletransfer(sock, numofpackets, filename, host, port):
     print "initializing file transfer"
-    sock.sendto("INIT_FILETRANSFER_" + filename + "_" + str(numofpackets), (host, port))
+    sock.sendto("INITFILETRANSFER_" + filename + "_" + str(numofpackets), (host, port))
+
+def resolveResendRequest(fullmes, packets, host, port, sock):
+    missingPackets = fullmes.split("_")
+    try:
+        for i in range(1, missingPackets - 1, 1):
+            sock.sendto(str(i)+"_"+packets[i], (host, port))
+    except:
+         print "resend error"
+
 
 def main(argv):
 
@@ -68,18 +77,6 @@ def main(argv):
     numofpackets = (filesize / packetsize) + 1
     print "NUM OF PACKETS: " + str(numofpackets)
 
-    # packets = []
-    # with open(argv[3], "rb") as in_file:
-    #     while True:
-    #         piece = in_file.read(packetsize)
-    #
-    #         if piece == "":
-    #             break # end of file
-    #
-    #         packets.append(piece)
-
-
-
     establishConnection(sock, server, port)
     # while True:
     lastSent = 0;
@@ -96,25 +93,35 @@ def main(argv):
 
     initfiletransfer(sock, numofpackets, filename, host, port)
 
+    allPacketsReceived = False
+
     while lastRec < numofpackets: #we need to detect duplicate and lost packets
         try:
             #send text
             sock.settimeout(2)
             print lastSent - lastRec
-            while lastSent < len(packets) and lastSent - lastRec < window:
+            while lastSent < len(packets) and len(inAir) < window: #len(inAir) used to be lastSent - lastRec
                 sock.sendto(str(lastSent)+"_"+packets[lastSent], (host, port))
                 inAir.append((lastSent, packets[lastSent]))
                 lastSent+=1
             print "WAITING"
-            mes = sock.recv(4096).split('_')
+            fullmes = sock.recv(4096)
+            mes = fullmes.split('_')
             print mes
-            lastRec = int(mes[1])
+
+            if mes[0] == "ACK":
+                lastRec = int(mes[1])
+                inAir.remove((lastRec, packets[lastRec]))
+
+            if mes[0] == "RESENDREQUEST":
+                resolveResendRequest(fullmes, packets, host, port, sock)
+
         except socket.timeout:
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:
             print "could not connect to address or port"
 
-
+    sock.sendto("FINTRANSFER", (host, port))
     print mes
     sock.close()
 

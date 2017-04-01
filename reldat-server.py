@@ -30,6 +30,21 @@ def checksum():
     print "ay"
 
 
+def resendRequest(filereceiving, host, port, sock):
+    resendString = "RESENDREQUEST_"
+
+    for i in range (0, len(filereceiving) - 1, 1):
+        if filereceiving[i] == 0:
+            resendString = resendString + "_" + str(i)
+
+    if len(resendString.split("_")) == 1:
+        return True
+
+    sock.sendto(resendString, (host, port))
+
+    return False
+
+
 
 def main(argv):
 
@@ -77,21 +92,22 @@ def main(argv):
 
         mes = mes.split('_')
 
-        if(mes[0] == "INIT_FILETRANSFER"):
-            print "initializing file transfer of" + mes[1]
-            filename = mes[1].split(".") #takes off txt
+        if(mes[0] == "INITFILETRANSFER"):
+            print "initializing file transfer of " + mes[1]
+            filename = mes[1].split(".") #takes off .txt ending
             filesize = mes[2]
             out_file = open(filename[0] + "-received.txt", "wb")
-            filereceiving = [0] * mes[2] # we initialize an array of zeroes indexed by sequence number
+            filereceiving = [0] * int(mes[2]) # we initialize an array of zeroes representing each packet indexed by sequence number
 
-        if(mes[0] == "FIN_TRANSFER"):
+        elif(mes[0] == "FINTRANSFER"):
+            print "all packets attempted transfer"
             for piece in filereceiving:
-                out_file.write(mes[1])
-
+                out_file.write(piece)
 
         else:
             send_sock.sendto("ACK_"+mes[0]+"_Got "+mes[1],addr)
-            filereceiving[mes[0]] = mes[1]
+            print "ACK'ed " + str(mes[0])
+            filereceiving[int(mes[0])] = mes[1]
 
 
 
