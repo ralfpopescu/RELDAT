@@ -1,6 +1,7 @@
 import sys
 import socket
 import time
+from struct import *
 
 connection = [0, 0, "", 0] #{client packet num, server packet num, client IP address, connected}
 
@@ -29,6 +30,22 @@ def checksum():
     print "ay"
 
 
+def resendRequest(filereceiving, host, port, sock):
+    resendString = "RESENDREQUEST_"
+
+    for i in range (0, len(filereceiving) - 1, 1):
+        if filereceiving[i] == 0:
+            resendString = resendString + "_" + str(i)
+
+    if len(resendString.split("_")) == 1:
+        return True
+
+    sock.sendto(resendString, (host, port))
+
+    return False
+
+
+
 def main(argv):
 
     numArgs = len(argv)
@@ -55,18 +72,47 @@ def main(argv):
 
     waitforconnection(sock)
 
-    print "Server started listening at %s port %d" % (host,port)
+    counter = 0
+
+    filereceiving = []
+
+    filename = "none" #declare outside of scope
+    filesize = 0
+
+    print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     while True:
 
+        print counter
+        counter += 1
         #recieve message and address from client
         mes, addr = sock.recvfrom(1024)
 
-        if connection[3] and addr is not connection[2]: #maintain connection with only one address
-            sock.sendto("BUSY", addr)
+        # if connection[3] and addr is not connection[2]: #maintain connection with only one address
+        #     sock.sendto("BUSY", addr)
 
-        # time.sleep(10)
         mes = mes.split('_')
-        send_sock.sendto(mes[0]+"_Got "+mes[1],addr)
+
+        if(mes[0] == "INITFILETRANSFER"):
+            print "initializing file transfer of " + mes[1]
+            filename = mes[1].split(".") #takes off .txt ending
+            filesize = mes[2]
+            out_file = open(filename[0] + "-received.txt", "wb")
+            filereceiving = [0] * int(mes[2]) # we initialize an array of zeroes representing each packet indexed by sequence number
+
+        elif(mes[0] == "FINTRANSFER"):
+            print "all packets attempted transfer"
+            for piece in filereceiving:
+                out_file.write(piece)
+
+        else:
+            send_sock.sendto("ACK_"+mes[0]+"_Got "+mes[1],addr)
+            print "ACK'ed " + str(mes[0])
+            filereceiving[int(mes[0])] = mes[1]
+
+
+
+
+
 
 
 
