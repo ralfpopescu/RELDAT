@@ -95,7 +95,9 @@ def main(argv):
 
     allPacketsReceived = False
 
-    while lastRec < numofpackets: #we need to detect duplicate and lost packets
+    while lastRec < numofpackets - 1: #we need to detect duplicate and lost packets
+        print lastRec
+        print numofpackets
         try:
             #send text
             sock.settimeout(2)
