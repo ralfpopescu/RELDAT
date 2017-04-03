@@ -56,7 +56,6 @@ def initfiletransfer(sock, numofpackets, filename, host, port):
         try:
             print "initializing file transfer"
             sock.sendto("INITFILETRANSFER_" + filename + "_" + str(numofpackets), (host, port)) #need to make reliable
-            sock.settimeout(2)
             wait = sock.recv(4096)
         except:
             print "trying again"
@@ -146,7 +145,6 @@ def recieve(sock,host,m,packets):
     while True:
         #recieve message and address from client
         try:
-            sock.settimeout(10)
             mes, addr = sock.recvfrom(1200)
 
             # if connection[3] and addr is not connection[2]: #maintain connection with only one address
@@ -192,10 +190,12 @@ def recieve(sock,host,m,packets):
                 else:
                     print "corrupted packet"
                     sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
-        except KeyboardInterrupt:
-            return
-        except:
-            print "Retrying connection"
+
+        except sock.timeout:
+            print "timeout, retrying..."
+        except socket.error:
+            print "error"
+
 def main(argv):
     # Connection Setup information
     args = len(argv)
