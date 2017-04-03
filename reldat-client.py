@@ -1,5 +1,6 @@
 import socket
 import sys
+import random
 import os
 import struct
 
@@ -43,11 +44,25 @@ def initfiletransfer(sock, numofpackets, filename, host, port):
 
 def resolveResendRequest(fullmes, packets, host, port, sock):
     missingPackets = fullmes.split("_")
+    print missingPackets
     try:
         for i in range(1, missingPackets - 1, 1):
+            print "resent packet " + str(i)
             sock.sendto(str(i)+"_"+packets[i], (host, port))
     except:
          print "resend error"
+
+def simulatePacketLoss(array):
+    for i in array:
+        ran = random.randint(0, 9) #10% chance of destroyed packet
+        if ran == 0:
+            array[i] = 0
+
+def resendAllinAir(inAir, sock, host, port):
+    for packet in inAir:
+        seqNum = packet[0]
+        message = packet[1]
+        sock.sendto(str(seqNum)+"_"+message, (host, port))
 
 
 def main(argv):
@@ -69,8 +84,8 @@ def main(argv):
     filename = sys.argv[3]
     f = open(argv[3], "rb")
     f.seek(0,2)
-    filesize = f.tell()
-    f.seek(0,0) #reset file
+    filesize = f.tell() #get file size
+    f.seek(0,0) #reset file position
 
     print filesize
 
@@ -88,8 +103,9 @@ def main(argv):
         packets.append(l)
         l = f.read(packetsize)
 
-    acked = []
+    acked = [0] * numofpackets
     inAir = []
+    numberAcked = 0
 
     initfiletransfer(sock, numofpackets, filename, host, port)
 
@@ -112,11 +128,17 @@ def main(argv):
             print mes
 
             if mes[0] == "ACK":
-                lastRec = int(mes[1])
-                inAir.remove((lastRec, packets[lastRec]))
+                numberAcked += 1 #keep track of how many things have been acked
+
+                recNum = int(mes[1]) #number
+                acked[recNum] = 1 #confirm acked in array
+                if recNum - numberAcked > window - 1:
+                    "Lost ACK limit reached"
+                    resendAllinAir(inAir, sock, host, port)
+                inAir.remove((recNum, packets[recNum]))
 
             if mes[0] == "RESENDREQUEST":
-                resolveResendRequest(fullmes, packets, host, port, sock)
+                resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
 
         except socket.timeout:
             print "The server has not answered in the last two seconds.\nretrying..."
@@ -124,6 +146,7 @@ def main(argv):
             print "could not connect to address or port"
 
     sock.sendto("FINTRANSFER", (host, port))
+
     print mes
     sock.close()
 
