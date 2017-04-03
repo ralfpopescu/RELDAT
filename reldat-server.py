@@ -226,8 +226,11 @@ def main(argv):
                 else:
                     print "corrupted packet"
                     send_sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+        except KeyboardInterrupt:
+            return
         except:
             print "Retrying connection"
+
 
 
 if __name__ == '__main__': print(main(sys.argv))

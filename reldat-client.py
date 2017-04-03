@@ -181,6 +181,8 @@ def recieve(sock,host,m,packets):
                 else:
                     print "corrupted packet"
                     sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+        except KeyboardInterrupt:
+            return
         except:
             print "Retrying connection"
 def main(argv):
