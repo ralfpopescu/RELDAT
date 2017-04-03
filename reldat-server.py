@@ -55,10 +55,11 @@ def send(sock, addr, packets, window, m):
     dup = 0
 
     while not transferComplete:
-        print highestAck
+        print "highest ack"+str(highestAck)
         try:
             print lastSent - highestAck
             while lastSent < len(packets) and lastSent - highestAck < window: #len(inAir) used to be lastSent - lastRec
+                m = hashlib.md5()
                 m.update(str(lastSent)+"_" + packets[lastSent])
                 checksum = m.hexdigest()
                 print "CHECKSUM: " + str(checksum)
@@ -181,8 +182,8 @@ def main(argv):
             # print filereceiving
             newPackets = [x.upper() for x in filereceiving]
             final = ''.join(filereceiving)
-            for pack in newPackets:
-                print pack
+            # for pack in newPackets:
+            #     print pack
             send(sock, addr, newPackets, window, m)
             # for piece in filereceiving:
             # print final
