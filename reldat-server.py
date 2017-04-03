@@ -1,5 +1,6 @@
 import sys
 import socket
+import random
 import time
 from struct import *
 
@@ -29,16 +30,25 @@ def waitforconnection(sock):
 def checksum():
     print "ay"
 
+def simulatePacketLoss(array):
+    for i in array:
+        ran = random.randint(0, 9) #10% chance of destroyed packet
+        if ran == 0:
+            array[i] = 0
+
 
 def resendRequest(filereceiving, host, port, sock):
+
     resendString = "RESENDREQUEST_"
 
     for i in range (0, len(filereceiving) - 1, 1):
         if filereceiving[i] == 0:
             resendString = resendString + "_" + str(i)
 
-    if len(resendString.split("_")) == 1:
+    if resendString == "RESENDREQUEST_":
         return True
+
+    print len(resendString.split("_"))
 
     sock.sendto(resendString, (host, port))
 
@@ -91,6 +101,9 @@ def main(argv):
         #     sock.sendto("BUSY", addr)
 
         mes = mes.split('_')
+        fullmes = mes[:]
+        fullmes = "".join(fullmes.pop(0)) #just in case there are other underscores in the message
+
 
         if(mes[0] == "INITFILETRANSFER"):
             print "initializing file transfer of " + mes[1]
@@ -101,13 +114,16 @@ def main(argv):
 
         elif(mes[0] == "FINTRANSFER"):
             print "all packets attempted transfer"
+            allReceived = False
+            while not allReceived:
+                allReceived = resendRequest(filereceiving, host, port, sock)
             for piece in filereceiving:
                 out_file.write(piece)
 
         else:
             send_sock.sendto("ACK_"+mes[0]+"_Got "+mes[1],addr)
             print "ACK'ed " + str(mes[0])
-            filereceiving[int(mes[0])] = mes[1]
+            filereceiving[int(mes[0])] = fullmes
 
 
 
