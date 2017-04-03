@@ -56,6 +56,7 @@ def initfiletransfer(sock, numofpackets, filename, host, port):
         try:
             print "initializing file transfer"
             sock.sendto("INITFILETRANSFER_" + filename + "_" + str(numofpackets), (host, port)) #need to make reliable
+            sock.settimeout(2)
             wait = sock.recv(4096)
         except:
             print "trying again"
@@ -143,41 +144,45 @@ def recieve(sock,host,m,packets):
     ind = 0
     while True:
         #recieve message and address from client
-        mes, addr = sock.recvfrom(1200)
+        try:
+            sock.settimeout(10)
+            mes, addr = sock.recvfrom(1200)
 
-        # if connection[3] and addr is not connection[2]: #maintain connection with only one address
-        #     sock.sendto("BUSY", addr)
+            # if connection[3] and addr is not connection[2]: #maintain connection with only one address
+            #     sock.sendto("BUSY", addr)
 
-        mes = mes.split('_')
-        checksum = mes[-1]
-        fullmes = mes[:]
-        fullmes = "_".join(fullmes[:-1]) #just in case there are other underscores in the message
-        if(mes[0] == "FINTRANSFER"):
-
-            final = ''.join(filereceiving)
-            sock.sendto('TRANSFERCOMPLETE', addr)
-            return final
-
-        else:
-            m = hashlib.md5()
-            m.update(fullmes)
-            calculatedChecksum = m.hexdigest()
+            mes = mes.split('_')
             checksum = mes[-1]
-            print checksum
-            print calculatedChecksum
+            fullmes = mes[:]
+            fullmes = "_".join(fullmes[:-1]) #just in case there are other underscores in the message
+            if(mes[0] == "FINTRANSFER"):
 
-            if checksum == calculatedChecksum:
-                print "checksum matches"
-                print int(mes[0])
-                filereceiving[int(mes[0])] = fullmes
-                while ind < len(filereceiving) and filereceiving[ind] != 0:
-                    # print filereceiving[ind]
-                    ind += 1
-                sock.sendto("ACK_"+str(ind)+"_Got "+mes[1],addr)
-                print "ACK'ed " + str(mes[0])
+                final = ''.join(filereceiving)
+                sock.sendto('TRANSFERCOMPLETE', addr)
+                return final
+
             else:
-                print "corrupted packet"
-                sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+                m = hashlib.md5()
+                m.update(fullmes)
+                calculatedChecksum = m.hexdigest()
+                checksum = mes[-1]
+                print checksum
+                print calculatedChecksum
+
+                if checksum == calculatedChecksum:
+                    print "checksum matches"
+                    print int(mes[0])
+                    filereceiving[int(mes[0])] = fullmes
+                    while ind < len(filereceiving) and filereceiving[ind] != 0:
+                        # print filereceiving[ind]
+                        ind += 1
+                    sock.sendto("ACK_"+str(ind)+"_Got "+mes[1],addr)
+                    print "ACK'ed " + str(mes[0])
+                else:
+                    print "corrupted packet"
+                    sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+        except:
+            print "Retrying connection"
 def main(argv):
     # Connection Setup information
     args = len(argv)
