@@ -149,7 +149,12 @@ def main(argv):
         try:
             print counter
             counter += 1
+            #recieve message and address from client
+            sock.settimeout(10)
             mes, addr = sock.recvfrom(1200)
+
+            # if connection[3] and addr is not connection[2]: #maintain connection with only one address
+            #     sock.sendto("BUSY", addr)
 
             mes = mes.split('_')
             checksum = str(mes[-1])
@@ -178,6 +183,7 @@ def main(argv):
                 # print filereceiving
                 newPackets = [x.upper() for x in filereceiving]
                 final = ''.join(filereceiving)
+
 
                 acked = False
                 while not acked:
@@ -212,6 +218,7 @@ def main(argv):
 
             elif mes[0] == "SYN" or mes[0] == "SYNACK" or (mes[0] == "FINTRANSFER" and not transferringFile) or (mes[0] == "INITFILETRANSFER" and transferringFile):
                 print "picked up garbage packet"
+
 
             else:
                 # print fullmes
