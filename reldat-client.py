@@ -141,6 +141,7 @@ def main(argv):
                 resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
 
         except socket.timeout:
+            resendAllinAir(inAir, sock, host, port)
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:
             print "could not connect to address or port"
