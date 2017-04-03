@@ -194,7 +194,7 @@ def main(argv):
             connection = [0, 0, "", 0]
             filereceiving = []
             print "finished transfer"
-            waitforconnection(sock)
+            # waitforconnection(sock)
             counter = 0
             mes = None
 
