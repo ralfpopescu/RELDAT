@@ -47,6 +47,8 @@ def resendRequest(filereceiving, host, port, sock):
     sock.sendto(resendString, (host, port))
 
     return False
+
+
 def send(sock, addr, packets, window, m):
     lastSent = 0
     lastRec = 0
@@ -90,11 +92,10 @@ def send(sock, addr, packets, window, m):
                 #     resendAllinAir(inAir, sock, host, port)
                 # inAir.remove((recNum, packets[recNum]))
 
-            if mes[0] == "RESENDREQUEST":
-                resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
-
             if mes[0] == "TRANSFERCOMPLETE":
                 transferComplete = True
+                sock.sendto("TRANSACK", addr)
+
 
         except socket.timeout:
             # resendAllinAir(inAir, sock, host, port)
@@ -102,7 +103,6 @@ def send(sock, addr, packets, window, m):
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:
             print "could not connect to address or port"
-
 
 
 def main(argv):
@@ -146,85 +146,100 @@ def main(argv):
     print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     ind = 0
     while True:
+        try:
+            print counter
+            counter += 1
+            mes, addr = sock.recvfrom(1200)
 
-        print counter
-        counter += 1
-        #recieve message and address from client
-        mes, addr = sock.recvfrom(1200)
-
-        # if connection[3] and addr is not connection[2]: #maintain connection with only one address
-        #     sock.sendto("BUSY", addr)
-
-        mes = mes.split('_')
-        checksum = str(mes[-1])
-        fullmes = mes[:-1]
-        fullmes = "_".join(fullmes) #just in case there are other underscores in the message
-        # print "FULL CHECKSUM CALC:"+fullmes
-        m.update(fullmes)
-        print "CHECKSUM:" + str(m.hexdigest())
-        print "packet sum: " + str(checksum)
-
-        if(mes[0] == "INITFILETRANSFER") and not transferringFile:
-            print "initializing file transfer of " + mes[1]
-            transferringFile = True
-            filename = mes[1].split(".") #takes off .txt ending
-            filesize = mes[2]
-            filereceiving = [0] * int(mes[2]) # we initialize an array of zeroes representing each packet indexed by sequence number
-            acks = [0] * int(mes[2])
-            sock.sendto('ACK', addr)
-
-        elif(mes[0] == "FINTRANSFER") and transferringFile:
-            print "all packets attempted transfer"
-            allReceived = False
-            transferringFile = False
-
-            send_sock.sendto("TRANSFERCOMPLETE",addr)
-            # print filereceiving
-            newPackets = [x.upper() for x in filereceiving]
-            final = ''.join(filereceiving)
-            # for pack in newPackets:
-            #     print pack
-            send(sock, addr, newPackets, window, m)
-            # for piece in filereceiving:
-            # print final
-            # with open(filename[0]+"-recieved.txt",'w') as out_file:
-            #     out_file.write(final)
-            #     out_file.close()
-            #reset server for new file
-            connection = [0, 0, "", 0]
-            filereceiving = []
-            print "finished transfer"
-            waitforconnection(sock)
-            counter = 0
-            mes = None
-
-        elif mes[0] == "SYN" or mes[0] == "SYNACK" or (mes[0] == "FINTRANSFER" and not transferringFile) or (mes[0] == "INITFILETRANSFER" and transferringFile):
-            print "picked up garbage packet"
-
-        else:
-            # print fullmes
-            m = hashlib.md5()
+            mes = mes.split('_')
+            checksum = str(mes[-1])
+            fullmes = mes[:-1]
+            fullmes = "_".join(fullmes) #just in case there are other underscores in the message
+            # print "FULL CHECKSUM CALC:"+fullmes
             m.update(fullmes)
-            calculatedChecksum = m.hexdigest()
-            checksum = mes[-1]
+            print "CHECKSUM:" + str(m.hexdigest())
+            print "packet sum: " + str(checksum)
 
-            print checksum
-            print calculatedChecksum
+            if(mes[0] == "INITFILETRANSFER") and not transferringFile:
+                print "initializing file transfer of " + mes[1]
+                transferringFile = True
+                filename = mes[1].split(".") #takes off .txt ending
+                filesize = mes[2]
+                filereceiving = [0] * int(mes[2]) # we initialize an array of zeroes representing each packet indexed by sequence number
+                acks = [0] * int(mes[2])
+                sock.sendto('ACK', addr)
+
+            elif(mes[0] == "FINTRANSFER") and transferringFile:
+                print "all packets attempted transfer"
+                allReceived = False
+                transferringFile = False
+
+                send_sock.sendto("TRANSFERCOMPLETE",addr)
+                # print filereceiving
+                newPackets = [x.upper() for x in filereceiving]
+                final = ''.join(filereceiving)
+
+                acked = False
+                while not acked:
+                    try:
+                        mes, addr = sock.recvfrom(1200)
+                        if mes == "TRANSACK":
+                            acked = True
+                    except socket.timeout:
+                        sock.sendto('TRANSFERCOMPLETE', addr)
+
+                send(sock, addr, newPackets, window, m)
+
+                connection = [0, 0, "", 0]
+                filereceiving = []
+                print "finished transfer"
+                counter = 0
+                mes = None
+
+            elif mes[0] == "TERMINATECONNECTION":
+                send_sock.sendto("FINACK",addr)
+                acked = False
+                while not acked:
+                    try:
+                        mes, addr = sock.recvfrom(1200)
+                        if mes == "FINACK":
+                            acked = True
+                    except socket.timeout:
+                        send_sock.sendto("FINACK",addr)
+                connection = [0, 0, "", 0]
+                waitforconnection(sock)
 
 
-            if checksum == calculatedChecksum:
-                print "checksum matches"
-                # print mes
-                print "len file recieving:" +str(len(filereceiving))
-                filereceiving[int(mes[0])] = fullmes
-                while ind < len(filereceiving) and filereceiving[ind] != 0:
-                    # print filereceiving[ind]
-                    ind += 1
-                send_sock.sendto("ACK_"+str(ind)+"_Got "+mes[1],addr)
-                print "ACK'ed " + str(mes[0])
+            elif mes[0] == "SYN" or mes[0] == "SYNACK" or (mes[0] == "FINTRANSFER" and not transferringFile) or (mes[0] == "INITFILETRANSFER" and transferringFile):
+                print "picked up garbage packet"
+
             else:
-                print "corrupted packet"
-                send_sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+                # print fullmes
+                m = hashlib.md5()
+                m.update(fullmes)
+                calculatedChecksum = m.hexdigest()
+                checksum = mes[-1]
 
+                print checksum
+                print calculatedChecksum
+
+
+                if checksum == calculatedChecksum:
+                    print "checksum matches"
+                    # print mes
+                    print "len file recieving:" +str(len(filereceiving))
+                    filereceiving[int(mes[0])] = fullmes
+                    while ind < len(filereceiving) and filereceiving[ind] != 0:
+                        # print filereceiving[ind]
+                        ind += 1
+                    send_sock.sendto("ACK_"+str(ind)+"_Got "+mes[1],addr)
+                    print "ACK'ed " + str(mes[0])
+                else:
+                    print "corrupted packet"
+                    send_sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
+        except socket.timeout:
+            print "timeout"
+        except socket.error:
+            print "error"
 
 if __name__ == '__main__': print(main(sys.argv))
