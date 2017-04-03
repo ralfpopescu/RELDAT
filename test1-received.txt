@@ -1,0 +1,501 @@
+0_Aaron Parry
+April 2, 2017
+Unsupervised Learning
+
+Unsupervised Learning
+
+Datasets:
+The datasets used for this assignment are the same spambase and breastcancer datasets used in assignment 1. The spambase dataset consists of 4601 samples of 56 continuous numeric attributes. The samples are a collections of emails labeled as either spam or not spam and the attributes denote the frequency of certain words and characters, as well as data about the number of capital letters used in the email.
+
+The breastcancer data set consists of 699 samples, each with 10 continuous numeric attributes. Each sample represents a tumor, labeled either benign or malignant, described by the 10 features, in such ways as size, shape, and regularity.
+
+These datasets are interesting for multiple reasons. By themselves, these datasets don’t tell a very interesting story. For example, in terms of datasets used for machine learning, the breastcancer dataset is extremely small and relatively simple. With only 10 featu1_res with relatively small domains, the results of running any of these algorithms on this dataset alone are largely uninteresting. However, when comparing these results to those of the much larger spambase dataset (still relatively mall in the field of machine learning), certain trends and behaviors become apparent and tell a far more interesting story.
+
+Most notably, the comparison of the unsupervised learning algorithms on datasets with different numbers of features proves to tell an interesting story, and outlines the strength of some of the algorithms at combatting the curse of dimensionality. As the spambase has over 50 features, and the breastcancer data has just 10, running the algorithms on these two datasets does just that, and tells the beginning of a story that has caused mathematicians and computer scientists grief for years now.
+
+Methods:
+The methodology for testing the unsupervised learning algorithms was relatively simple. The first step was to find a baseline performanc2_e using the K-Means, and Expectation Maximization clustering algorithms. Each of these algorithms was run using a value of 2 for k, the number of clusters. The choice represents a significant amount of domain knowledge. Given these datasets are the same used for the classification problems, the choice to use 2 clusters represents the domain knowledge that each of these datasets is a classification problem with 2 labels.
+
+Following the baseline run for each dataset, they were run through the dimensionality reduction algorithms Principle Component Analysis, Independent Component Analysis, Randomized Projection, and Information Gain, where the former three transform the data into a shape that can tell more about the data, or maximized the amount of information in the axes. The latter is feature selection algorithm, where the data was run, and the algorithm returns the amount of information gained by each feature and the top n feature were then chosen. The data was then run through the clu3_stering algorithms again and the results were compared to the baseline.
+
+Finally, the spambase dataset was used to analyze the performance of a classification algorithm, in this case a neural network, on the data after dimensionality reduction. As before, a baseline performance was found, and the data was then run again through the neural network after each of the dimensionality reduction algorithms.
+
+Results:
+Baseline Clustering Algorithms:
+K Means:
+The baseline k means clustering algorithm performed relatively way as a weak learner when compared to the labeling of each of the datasets.
+
+Incorrect
+Error
+Time
+Sum
+Spambase
+924
+20.08%
+0.14
+777.5437052
+Breastcancer
+30
+4.29%
+0
+243.1478672
+
+Looking at the results tabulated above, the k-Means clustering algorithm performed significantly better on the smaller breastcancer data set at clustering the data in the same was was the samples labeling.
+
+Expectation Maximization:
+
+
+Incorrect
+Error
+Time
+LogLiklihood
+Spambase
+1051
+22.84%
+0.71
+122.41458
+4_Breastcancer
+43
+6.15%
+0.03
+11.00762
+
+Similarly looking at the results for the EM algorithm, when comparing the clusters to the classification labeling, the EM algorithm performed significantly better on the breastcancer data.
+
+Dimensionality Reduction
+
+After finding baseline results for the clustering algorithms on each of the datasets, they were then run through four dimensionality reduction algorithms and then compared to the baseline results.
+
+Principle Component Analysis:
+
+Principle component Analysis seeks to transform the features of the data set by projecting them onto new axes. PCA begins by finding a projection which maximizes the variance of the data, and then continues to find axes orthogonal to the last, continuously maximizing the variance. Weka takes in a parameter which allows the user to specify the fraction of total variance that principle component analysis maintains through its projects.
+
+In addition to testing the clustering datasets on the transformed datasets, PCA5_ was analyzed on its own elements, such as the resulting eigenvalues for each attribute, and the number of transformed features needed to maintain fractions of the variance.
+
+
+
+Shown above is a graph depicting the portion of total variance from the spambase dataset that each of the first 7 transformed axes maintains from the original frame of each dataset. As is depicted by the graph, the first eigenvalue (and portion of variance) of the spambase dataset is roughly twice as much as the second, which then accounts for roughly twice as much variance as the third eigenvector. It is interesting to not the first three axes account for almost a quarter of the variance, whereas the reaming 53 features account for the remainder, and the first axis is the only transformed axis with variance accounting for more than 10% of the total. This is even more extreme when looking at the breastcancer information. The first axis accounts for nearly 70% of the total variance, and the remaining 6 account fo6_r just over leftover 30%.
+
+“0.348word_freq_857+0.348word_freq_415+0.32 word_freq_direct+…”
+
+Weka outputs the name each axes. Above is the name of only the first axis from the transformed spambase axes, where the name is the linear combination of each of the original features. However, while the name is in order of decreasing linear combination of each axis, it is interesting to note here, the first few attribute are not the features with the highest information gain.  One explanation for this could be that the correlation between features leads to a linear combination of attributes that do not necessarily have the highest information gain.
+
+
+
+Spambase
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+0.95
+955
+20.76%
+0.09
+1945
+42.27%
+1.33
+0.75
+855
+18.58%
+0.06
+1986
+43.16%
+1.03
+0.5
+824
+17.91%
+0.04
+2178
+47.34%
+0.57
+0.1
+1847
+40.14%
+0.2
+2260
+49.12%
+0.14
+
+Breastcancer
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+0.95
+27
+3.86%
+0
+50
+7.15%
+0.09
+0.75
+32
+4.58%
+0
+2
+6.01%
+0.04
+0.5
+37_2
+4.58%
+0
+35
+5.01%
+0.02
+0.1
+32
+4.58%
+0
+35
+5.01%
+0.02
+
+In addition to the results of the PCA algorithm, the results of the clustering algorithms prove to tell an interesting story as well. In the case of the K-Means algorithm, performing PCA on the data actually increased the accuracy of the clustering algorithms at clustering like labels together when performed on the spambase data. However, it appears that there is a minimum about of variance at which the algorithm peaks, as when the total amount of variance accounted for became too little the performance actually decreased. In the case of EM, the algorithm was significantly less accurate after performing the dimensionality reduction, and continued to get less accurate as the amount of variance decreased.
+
+In the case of both clustering algorithms, the opposite was the case for the spambase date. The K-Means algorithm actually got less accurate was variance decreased, and EM performed better.
+
+This may be due to the difference in numb8_er of features of the two datasets. For example, the k-means algorithm performed better with less variance on the spambase dataset, and worse in the case of breastcancer. Seeing as the breastcancer data has only 10 features to begin with, after transforming the data, using fewer attribute to classify may have oversimplified the data. Likewise, since the spambase data was much larger, having 56 attributes, the transformed and then filtered data may have been too complex originally, and the dimensionality reduction algorithm therefore simplified the data enough to better cluster the instances accurately. However, as is shown when the variance was 0.1, there was a point where the data become oversimplified and the performance deteriorated.
+
+Independent Component Analysis:
+
+Whereas PCA aimed to transform the attributes of the dataset attempting to maximize the variance, Independent Component Analysis attempts to transform the features into their underlying independent components.
+
+Spambase9_
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+27
+1170
+25.43%
+0.09
+2062
+44.82%
+1.01
+10
+1305
+28.36%
+0.04
+2001
+43.49%
+0.9
+3
+2005
+43.58%
+0.03
+2007
+43.62%
+0.33
+1
+2039
+44.32%
+0.02
+2012
+43.73%
+0.24
+
+Breastcancer
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+8
+37
+5.29%
+0
+78
+11.16%
+0.05
+5
+52
+7.44%
+0
+104
+14.88%
+0.03
+1
+145
+20.74%
+0
+144
+20.60%
+0.02
+
+The independent component analysis dimensionality reduction performed significantly worse when comparing the clustering algorithms to the classification labeling. In the case of all but one clustering, both expectation maximization and k-means performed worse than the baseline clustering.
+
+In the case of Spambase, k-means performed worse, the fewer independent components that were used. EM, on the other hand, performed slightly better, but the difference was just over 1%, which is not enough to claim that ICA was useful at reducing the dimensionality of the Spambase dataset. In fact, despite improving by 1%, the error remained higher by 10_a 20%. This is likely due to the lack of interesting or useful underlying independent components. While there may simply be a lack of underlying independent components, alternatively, there may indeed be some, but they are simply uninteresting in clustering the samples. This is most likely the case, as shown by the results of the expectation maximization algorithm. With roughly half of the features, at 27, the error was significantly higher, at 40%, as compared to the baseline, 20%. Therefore, there may be independent components in the data, but it is not useful at clustering the instances according to the classification problem.
+
+Similarly, both of the clustering algorithms performed more poorly on the Breastcancer data after the dimensionality reduction. However, contrary to with the Spambase dataset, the EM algorithm had significantly more error as the number of independent components used in clustering was decreased. This is a strong indicator that the Breastcancer was already fair11_ly independent in the original feature space.
+
+Randomized Projection:
+
+The purpose of randomized projection is to reduce the dimensionality of the dataset by randomly selecting features. It turns out that often this is an effective method at reducing the complexity of the space, as it is similar to a randomized optimization problem.
+
+
+Spambase
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+1
+1295
+28.15%
+0.01
+1746
+37.95%
+0.13
+10
+1226
+26.65%
+0.03
+2027
+44.06%
+0.39
+25
+1161
+25.23%
+0.07
+2165
+47.06%
+0.75
+50
+1016
+22.08%
+0.09
+1849
+40.19%
+0.82
+
+Breastcancer
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+1
+57
+8.15%
+0
+110
+15.74%
+0.04
+3
+56
+8.01%
+0
+47
+6.72%
+0.02
+8
+50
+7.15%
+0
+58
+8.30%
+0.04
+
+While overall randomized projection performed less accurately than the baseline clustering algorithms, it did prove to be useful, or at the very least proved its potential usefulness.
+
+The data above shows the results after performing randomized projection on each of the datasets. While in both cases t12_he error was greater than the baseline, there are a few interesting numbers that jump out. First off is the difference in accuracy for all but expectation maximization on spambase. In the case of the other 3 clustering algorithms, while the accuracy was slightly worse, the clustering algorithms still performed quite well at clustering like labels. In fact, each run was within just 10% accuracy of the baseline, and for most of the trials, was actually within 5%. Depending on the situation this can actually be a very useful decrease in accuracy.
+
+The idea behind each of the dimensionality reduction algorithms is to select only the most relevant features either before or after projecting them into a new space. However, depending on the amount of data, and structure of the data, even this can be a very computationally expensive task.
+
+Randomized Projection, as shown here, can significantly reduce the complexity of analyzing the data at very little cost. As is shown, RP maintains most of th13_e performance on average of running clustering on the data using all of the features, but can significantly reduce how much computing power is necessary. While not necessarily depicted by these experiments, on datasets of millions of instances, or worse yet, millions of attributes, RP can very quickly simplify the problem, while maintaining many of the underlying elements.
+
+Information Gain:
+
+The final dimensionality reduction algorithm used was information gain. The process of this algorithm was relatively simple as compared to others. The feature space remained unchanged, as the algorithm simply found the features with the highest information gain, and selected the top n of them.
+
+Spambase
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+1
+1796
+39.04%
+0.02
+1049
+22.80%
+0.25
+3
+1723
+37.45%
+0.03
+868
+18.87%
+0.53
+10
+1230
+26.73%
+0.03
+625
+13.58%
+0.24
+
+Breastcancer
+KM
+
+
+EM
+
+
+
+Incorrect
+Error
+Time
+Incorrect
+Error
+Time
+1
+103
+14.74%
+0
+82
+11.73%
+0.01
+3
+36
+5.15%
+0
+101
+14.45%
+0.02
+5
+34
+4.86%
+0.14_01
+100
+14.31%
+0.03
+
+
+The results, tabulated above, point out a few of the interesting and powerful elements of information gain. First off, it is interesting to point out how well the clustering was performed on the data using just one feature. While the error was roughly 40% for k-means when used on the Spambase data, the rest of the trials had an error rate of less than 25%. While this is not a fantastic performance by any means, 75% accuracy is still a fairly accurate clustering of the data, and based on just one feature.
+
+This property of the algorithm could be extremely useful on large datasets with attributes that are fairly independent. One could argue that if a dataset can be reduced to one or two features, then perhaps it is uninteresting, but the ability of information gain to reduce the size of the data by nearly 90%, and still produce accurate results can be extremely powerful. In the case of the Spambase dataset, while clustering performed poorly with fewer than 10 feature15_s, it performed almost as well as the baseline with only 10 features. The Spambase dataset, while larger than Breastcancer, still had only 56 features. However, on a dataset with thousands of features where many are useless and irrelevant, information gain would be extremely powerful at reducing the feature space. Take for example user data from sites like Google or social networks, like Facebook. Information gain provides a relatively inexpensive method of reducing the size of the space to only the features with the most information.
+
+
+
+
+
+
+
+
+
+
+
+Neural Networks:
+
+
+
+
+In addition to analyzing the performance of the dimensionality reduction algorithms using the k-Means and Expectation Maximization algorithms, the transformed data spaces were also run through a neural network classifier, and compared to the baseline of the original feature space. The graph above depicts some of the results.
+
+All of the algorithms were run on the Spambase dataset, and therefore all of the results pertain to16_ that dataset. Similar to when the dataset was used to measure classification algorithms’ performances, the neural network was able to classify over 80% of all instances correctly in all of the dimensionality reduction trails as well as the baseline.
+
+Perhaps the most notable observation is the decrease in performance after applying Randomized Projection to the data. While 84% is still a reasonable accuracy for a classification problem (depending on the situation), it reflects a 10% decrease in accuracy as compared to Independent Component Analysis.
+
+Conversely, both Independent and Principle Component Analysis outperformed the original feature space in the classification problem. The juxtaposition between ICA, PCA, and RP seems intuitive, though. Both ICA and PCA aim to transform the feature space into a set of new axes which better represent the data. Therefore, if this is possible, then it makes sense that the classifier is better able to classify the data. It should be noted, how17_ever, that the projection of ICA and PCA may lead to overfitting, as the projected space is supposed to fit the data better than original space. If this is true though, the learner may believe the data too much, and therefore lose generality.
+
+On the opposite end, while RP performs well for the cost that it eliminates, there is no guarantee that the features selected are either relevant or useful to classifying the data.
+
+Summary:
+
+Overall, Information Gain proved to be the most useful for reducing the dimensionality of the data when using the clustering algorithms as a measure of performance. On the other hand, PCA and ICA performed the best when a neural network classifier was used as the measure of performance.
+
+However, these experiments tell a part of the story. As mentioned before, each cluster algorithm was run with a value of 2 for k. This represents a significant amount of domain knowledge, and therefore restricted the trials to certain results. While the datasets are known to18_ be classification problems with two labels each, there may also be underlying properties of the data which is not reflected by simply the two labels. For example, each label cluster may have n distinct sub-clusters that each reflect some unknown information about the data.
+
+Seeing as unsupervised algorithms are meant to describe data, by limiting the analysis to some known bench mark, it becomes harder if not impossible to fully understand the data.
+
+In addition to the experiments run, it would also be worthwhile to reflect on the shape of the data where k, the number of cluster, is the variable. However, while there are infinitely many ways in which to analyze each of these, and even more unsupervised learning algorithms, the trials were able to give an accurate picture as to the effectiveness of these in certain situations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RESOURCES
+
+O. L. Mangasarian and W. H. Wolberg: "Cancer diagnosis via linear programming", SIAM News, Volume 23, Number 5, September 1990, pp 19_1 & 18. 
+
+William H. Wolberg and O.L. Mangasarian: "Multisurface method of pattern separation for medical diagnosis applied to breast cytology", Proceedings of the National Academy of Sciences, U.S.A., Volume 87, December 1990, pp 9193-9196. 
+
+O. L. Mangasarian, R. Setiono, and W.H. Wolberg: "Pattern recognition via linear programming: Theory and application to medical diagnosis", in: "Large-scale numerical optimization", Thomas F. Coleman and Yuying Li, editors, SIAM Publications, Philadelphia 1990, pp 22-30. 
+
+K. P. Bennett & O. L. Mangasarian: "Robust linear programming discrimination of two linearly inseparable sets", Optimization Methods and Software 1, 1992, 23-34 (Gordon & Breach Science Publishers).
+Lichman, M. (2013). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science.

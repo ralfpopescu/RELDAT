@@ -68,7 +68,7 @@ def main(argv):
     print "Connecting to "+str(host)+":"+str(port)
     sock.bind((socket.gethostbyname(socket.gethostname()), port))
 
-    packetsize = 1000
+    packetsize = 1024
     filename = sys.argv[3]
     f = open(argv[3], "rb")
     f.seek(0,2)
@@ -123,7 +123,7 @@ def main(argv):
             fullmes = sock.recv(4096)
             mes = fullmes.split('_')
 
-            if mes[0] == "ACK":
+            if "ACK" in mes:
                 numberAcked += 1 #keep track of how many things have been acked
 
                 recNum = int(mes[1]) #number

@@ -47,6 +47,60 @@ def resendRequest(filereceiving, host, port, sock):
     sock.sendto(resendString, (host, port))
 
     return False
+def send(sock, addr, packets, window, m):
+    lastSent = 0
+    lastRec = 0
+    highestAck = 0
+    transferComplete = False
+    dup = 0
+
+    while not transferComplete:
+        print highestAck
+        try:
+            print lastSent - highestAck
+            while lastSent < len(packets) and lastSent - highestAck < window: #len(inAir) used to be lastSent - lastRec
+                m.update(str(lastSent)+"_" + packets[lastSent])
+                checksum = m.hexdigest()
+                print "CHECKSUM: " + str(checksum)
+                sendString = str(lastSent)+"_"+packets[lastSent] + "_" + checksum
+                print sendString
+                sock.sendto(sendString, addr)
+                lastSent+=1
+            sock.settimeout(2)
+            print "WAITING"
+
+            if highestAck >= len(packets) - 1:
+                sock.sendto("FINTRANSFER", addr)
+
+            fullmes = sock.recv(4096)
+            mes = fullmes.split('_')
+
+            if mes[0] == 'ACK':
+                print "WAITING FOR " + mes[1]
+                if highestAck == int(mes[1]):
+                    dup += 1
+                if dup == 3:
+                    lastSent = highestAck
+                highestAck = int(mes[1])
+                recNum = int(mes[1]) #number
+                # acked[recNum] = 1 #confirm acked in array
+                # if recNum - numberAcked > window/2: #we assume we lost half of sent packets, resend
+                #     "Lost ACK limit reached"
+                #     resendAllinAir(inAir, sock, host, port)
+                # inAir.remove((recNum, packets[recNum]))
+
+            if mes[0] == "RESENDREQUEST":
+                resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
+
+            if mes[0] == "TRANSFERCOMPLETE":
+                transferComplete = True
+
+        except socket.timeout:
+            # resendAllinAir(inAir, sock, host, port)
+            lastSent = highestAck
+            print "The server has not answered in the last two seconds.\nretrying..."
+        except socket.error:
+            print "could not connect to address or port"
 
 
 
@@ -57,8 +111,8 @@ def main(argv):
     numArgs = len(argv)
     port = int(argv[1])
     window = argv[2]
-    #host = socket.gethostbyname(socket.gethostname())
-    host = "127.0.0.1"
+    host = socket.gethostbyname(socket.gethostname())
+    # host = "127.0.0.1"
     send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     print host
@@ -79,6 +133,7 @@ def main(argv):
 
     counter = 0
 
+    acks = []
     filereceiving = []
     m = hashlib.md5() #checksummer
 
@@ -88,6 +143,7 @@ def main(argv):
     fileID = 0 #simple counter that prevents old packets from interfering
 
     print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
+    ind = 0
     while True:
 
         print counter
@@ -99,36 +155,44 @@ def main(argv):
         #     sock.sendto("BUSY", addr)
 
         mes = mes.split('_')
-        checksum = mes[-1]
-        fullmes = mes[:]
-        fullmes = "_".join(fullmes[:-1]) #just in case there are other underscores in the message
-
+        checksum = str(mes[-1])
+        fullmes = mes[:-1]
+        fullmes = "_".join(fullmes) #just in case there are other underscores in the message
+        # print "FULL CHECKSUM CALC:"+fullmes
+        m.update(fullmes)
+        print "CHECKSUM:" + str(m.hexdigest())
+        print "packet sum: " + str(checksum)
 
         if(mes[0] == "INITFILETRANSFER") and not transferringFile:
             print "initializing file transfer of " + mes[1]
             transferringFile = True
             filename = mes[1].split(".") #takes off .txt ending
             filesize = mes[2]
-            out_file = open(filename[0] + "-received.txt", "wb")
             filereceiving = [0] * int(mes[2]) # we initialize an array of zeroes representing each packet indexed by sequence number
+            acks = [0] * int(mes[2])
+            sock.sendto('ACK', addr)
 
         elif(mes[0] == "FINTRANSFER") and transferringFile:
             print "all packets attempted transfer"
             allReceived = False
             transferringFile = False
 
-            while not allReceived:
-                allReceived = resendRequest(filereceiving, host, port, sock)
-
             send_sock.sendto("TRANSFERCOMPLETE",addr)
-
-            for piece in filereceiving:
-                #print piece
-                out_file.write(piece)
-
+            # print filereceiving
+            newPackets = [x.upper() for x in filereceiving]
+            final = ''.join(filereceiving)
+            for pack in newPackets:
+                print pack
+            send(sock, addr, newPackets, window, m)
+            # for piece in filereceiving:
+            # print final
+            # with open(filename[0]+"-recieved.txt",'w') as out_file:
+            #     out_file.write(final)
+            #     out_file.close()
             #reset server for new file
             connection = [0, 0, "", 0]
             filereceiving = []
+            print "finished transfer"
             waitforconnection(sock)
             counter = 0
             mes = None
@@ -137,21 +201,29 @@ def main(argv):
             print "picked up garbage packet"
 
         else:
-
+            # print fullmes
+            m = hashlib.md5()
             m.update(fullmes)
             calculatedChecksum = m.hexdigest()
+            checksum = mes[-1]
 
             print checksum
             print calculatedChecksum
 
+
             if checksum == calculatedChecksum:
                 print "checksum matches"
-                send_sock.sendto("ACK_"+mes[0]+"_Got "+mes[1],addr)
-                print "ACK'ed " + str(mes[0])
+                # print mes
+                print "len file recieving:" +str(len(filereceiving))
                 filereceiving[int(mes[0])] = fullmes
+                while ind < len(filereceiving) and filereceiving[ind] != 0:
+                    # print filereceiving[ind]
+                    ind += 1
+                send_sock.sendto("ACK_"+str(ind)+"_Got "+mes[1],addr)
+                print "ACK'ed " + str(mes[0])
             else:
                 print "corrupted packet"
-                send_sock.sendto("RESENDREQUEST_" + str(mes[0]), addr)
+                send_sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
 
 
 if __name__ == '__main__': print(main(sys.argv))
