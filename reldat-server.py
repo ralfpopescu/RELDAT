@@ -47,6 +47,8 @@ def resendRequest(filereceiving, host, port, sock):
     sock.sendto(resendString, (host, port))
 
     return False
+
+
 def send(sock, addr, packets, window, m):
     lastSent = 0
     lastRec = 0
@@ -90,11 +92,10 @@ def send(sock, addr, packets, window, m):
                 #     resendAllinAir(inAir, sock, host, port)
                 # inAir.remove((recNum, packets[recNum]))
 
-            if mes[0] == "RESENDREQUEST":
-                resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
-
             if mes[0] == "TRANSFERCOMPLETE":
                 transferComplete = True
+                sock.sendto("TRANSACK", addr)
+
 
         except socket.timeout:
             # resendAllinAir(inAir, sock, host, port)
@@ -102,7 +103,6 @@ def send(sock, addr, packets, window, m):
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:
             print "could not connect to address or port"
-
 
 
 def main(argv):
@@ -183,24 +183,42 @@ def main(argv):
                 # print filereceiving
                 newPackets = [x.upper() for x in filereceiving]
                 final = ''.join(filereceiving)
-                # for pack in newPackets:
-                #     print pack
+
+
+                acked = False
+                while not acked:
+                    try:
+                        mes, addr = sock.recvfrom(1200)
+                        if mes == "TRANSACK":
+                            acked = True
+                    except socket.timeout:
+                        sock.sendto('TRANSFERCOMPLETE', addr)
+
                 send(sock, addr, newPackets, window, m)
-                # for piece in filereceiving:
-                # print final
-                # with open(filename[0]+"-recieved.txt",'w') as out_file:
-                #     out_file.write(final)
-                #     out_file.close()
-                #reset server for new file
+
                 connection = [0, 0, "", 0]
                 filereceiving = []
                 print "finished transfer"
-                # waitforconnection(sock)
                 counter = 0
                 mes = None
 
+            elif mes[0] == "TERMINATECONNECTION":
+                send_sock.sendto("FINACK",addr)
+                acked = False
+                while not acked:
+                    try:
+                        mes, addr = sock.recvfrom(1200)
+                        if mes == "FINACK":
+                            acked = True
+                    except socket.timeout:
+                        send_sock.sendto("FINACK",addr)
+                connection = [0, 0, "", 0]
+                waitforconnection(sock)
+
+
             elif mes[0] == "SYN" or mes[0] == "SYNACK" or (mes[0] == "FINTRANSFER" and not transferringFile) or (mes[0] == "INITFILETRANSFER" and transferringFile):
                 print "picked up garbage packet"
+
 
             else:
                 # print fullmes
@@ -226,8 +244,9 @@ def main(argv):
                 else:
                     print "corrupted packet"
                     send_sock.sendto("ACK_"+str(ind)+"_Got" + str(mes[0]), addr)
-        except:
-            print "Retrying connection"
-
+        except socket.timeout:
+            print "timeout"
+        except socket.error:
+            print "error"
 
 if __name__ == '__main__': print(main(sys.argv))
