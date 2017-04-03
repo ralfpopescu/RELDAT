@@ -1,6 +1,6 @@
 import socket
 import sys
-import random
+import hashlib
 import os
 import struct
 
@@ -8,7 +8,7 @@ import struct
 connection = [0, 0, "", 0] #{client packet num, server packet num, server IP address, connected}
 
 
-def establishConnection(sock, server, port):
+def establishConnection(sock, server, port): #need to make reliable
     global connection
     print "sent syn"
 
@@ -23,7 +23,7 @@ def establishConnection(sock, server, port):
             if synAck == "SYNACK":
                 connection = [0, 0, server, 1]
                 print "received synack, sent ack"
-                sock.sendto("ACK", (server, port))
+                sock.sendto("SYNACK", (server, port))
 
         except socket.error, msg:
             print "could not connect to address or port"
@@ -31,16 +31,9 @@ def establishConnection(sock, server, port):
     print "CONNECTED"
 
 
-def packetize(array, packetsize):
-    packets = []
-    for i in range(0, len(array), packetsize):
-        packets.append(array[i:i + packetsize])
-    return packets
-
-
 def initfiletransfer(sock, numofpackets, filename, host, port):
     print "initializing file transfer"
-    sock.sendto("INITFILETRANSFER_" + filename + "_" + str(numofpackets), (host, port))
+    sock.sendto("INITFILETRANSFER_" + filename + "_" + str(numofpackets), (host, port)) #need to make reliable
 
 def resolveResendRequest(fullmes, packets, host, port, sock):
     missingPackets = fullmes.split("_")
@@ -52,11 +45,6 @@ def resolveResendRequest(fullmes, packets, host, port, sock):
     except:
          print "resend error"
 
-def simulatePacketLoss(array):
-    for i in array:
-        ran = random.randint(0, 9) #10% chance of destroyed packet
-        if ran == 0:
-            array[i] = 0
 
 def resendAllinAir(inAir, sock, host, port):
     for packet in inAir:
@@ -87,7 +75,9 @@ def main(argv):
     filesize = f.tell() #get file size
     f.seek(0,0) #reset file position
 
-    print filesize
+    print "Filesize: " + str(filesize)
+
+    m = hashlib.md5() #checksummer
 
     numofpackets = (filesize / packetsize) + 1
     print "NUM OF PACKETS: " + str(numofpackets)
@@ -109,30 +99,36 @@ def main(argv):
 
     initfiletransfer(sock, numofpackets, filename, host, port)
 
-    allPacketsReceived = False
+    transferComplete = False
 
-    while lastRec < numofpackets - 1: #we need to detect duplicate and lost packets
+    while not transferComplete:
         print lastRec
-        print numofpackets
         try:
-            #send text
             sock.settimeout(2)
             print lastSent - lastRec
             while lastSent < len(packets) and len(inAir) < window: #len(inAir) used to be lastSent - lastRec
-                sock.sendto(str(lastSent)+"_"+packets[lastSent], (host, port))
+                m.update(str(lastSent)+"_" + packets[lastSent])
+                checksum = m.hexdigest()
+                print "CHECKSUM: " + str(checksum)
+                sendString = str(lastSent)+"_"+packets[lastSent] + "_" + checksum
+                print sendString
+                sock.sendto(sendString, (host, port))
                 inAir.append((lastSent, packets[lastSent]))
                 lastSent+=1
             print "WAITING"
+
+            if lastSent >= len(packets):
+                sock.sendto("FINTRANSFER", (host, port))
+
             fullmes = sock.recv(4096)
             mes = fullmes.split('_')
-            print mes
 
             if mes[0] == "ACK":
                 numberAcked += 1 #keep track of how many things have been acked
 
                 recNum = int(mes[1]) #number
                 acked[recNum] = 1 #confirm acked in array
-                if recNum - numberAcked > window - 1:
+                if recNum - numberAcked > window/2: #we assume we lost half of sent packets, resend
                     "Lost ACK limit reached"
                     resendAllinAir(inAir, sock, host, port)
                 inAir.remove((recNum, packets[recNum]))
@@ -140,13 +136,16 @@ def main(argv):
             if mes[0] == "RESENDREQUEST":
                 resolveResendRequest(fullmes, packets, host, port, sock) #fullmes includes missing packet info
 
+            if mes[0] == "TRANSFERCOMPLETE":
+                transferComplete = True
+
         except socket.timeout:
             resendAllinAir(inAir, sock, host, port)
             print "The server has not answered in the last two seconds.\nretrying..."
         except socket.error:
             print "could not connect to address or port"
 
-    sock.sendto("FINTRANSFER", (host, port))
+    #sock.sendto("FINTRANSFER", (host, port))
 
     print mes
     sock.close()
