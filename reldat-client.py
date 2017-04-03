@@ -248,7 +248,7 @@ def main(argv):
             initfiletransfer(sock, numofpackets, filename, host, port)
             send(sock, host, port, packets, window, m)
             transformed = recieve(sock, host, m,packets)
-            with open(filename+"_transformed.txt",'w') as open_file:
+            with open("transformed.txt",'w') as open_file:
                 open_file.write(transformed)
                 open_file.close()
         #else disconnect
