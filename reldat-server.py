@@ -12,7 +12,7 @@ def waitforconnection(sock):
     while not connection[3]:
         try:
             print "trying to connect"
-            mes, addr = sock.recvfrom(1024)
+            mes, addr = sock.recvfrom(1200)
             print mes
             if mes == "SYN":
                 print "waiting for syn"
@@ -60,7 +60,6 @@ def main(argv):
     #host = socket.gethostbyname(socket.gethostname())
     host = "127.0.0.1"
     send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    rec_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     print host
     print port
@@ -86,6 +85,7 @@ def main(argv):
     filename = "none" #declare outside of scope
     filesize = 0
     transferringFile = False #make sure old FINTRANSFERS don't stop new transfers
+    fileID = 0 #simple counter that prevents old packets from interfering
 
     print "Server started listening at %s port %d" % (host,port) #we need beginning and end file indicators
     while True:
@@ -115,6 +115,8 @@ def main(argv):
         elif(mes[0] == "FINTRANSFER") and transferringFile:
             print "all packets attempted transfer"
             allReceived = False
+            transferringFile = False
+
             while not allReceived:
                 allReceived = resendRequest(filereceiving, host, port, sock)
 
@@ -123,16 +125,24 @@ def main(argv):
             for piece in filereceiving:
                 #print piece
                 out_file.write(piece)
-            transferringFile = False
-            connection = [0, 0, "", 0]
-            waitforconnection(sock)
 
-        elif mes[0] == "SYN" or mes[0] == "SYNACK":
-            print "picked up old syn packet"
+            #reset server for new file
+            connection = [0, 0, "", 0]
+            filereceiving = []
+            waitforconnection(sock)
+            counter = 0
+            mes = None
+
+        elif mes[0] == "SYN" or mes[0] == "SYNACK" or (mes[0] == "FINTRANSFER" and not transferringFile) or (mes[0] == "INITFILETRANSFER" and transferringFile):
+            print "picked up garbage packet"
 
         else:
+
             m.update(fullmes)
             calculatedChecksum = m.hexdigest()
+
+            print checksum
+            print calculatedChecksum
 
             if checksum == calculatedChecksum:
                 print "checksum matches"
@@ -140,7 +150,7 @@ def main(argv):
                 print "ACK'ed " + str(mes[0])
                 filereceiving[int(mes[0])] = fullmes
             else:
-                print "bad packet"
+                print "corrupted packet"
                 send_sock.sendto("RESENDREQUEST_" + str(mes[0]), addr)
 
 
